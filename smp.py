@@ -17,9 +17,9 @@ import multiprocessing as mp
 # Función para sumar todos los elementos de una matriz
 # Almacenar resultados en lista en índice específico
 def matrix_add_thread(chunk_matrix, results, index):
-    results[index] = sec_sum_matrix(chunk_matrix) #Empleamos librería numpy
+    results[index] = sec_sum_matrix(chunk_matrix) #Empleamos suma secuencial
 
-# Función que divide matriz en un número N de chunks
+# Función que divide matriz en chunks de tamaño chunk_row X chunk_col
 def split_matrix(matrix, chunk_row, chunk_col):
     rows, cols = matrix.shape # Dimensiones de matriz original 
 
@@ -79,18 +79,18 @@ def par_sum_matrix_procs(main_matrix, chunk_rows, chunk_cols):
 # Suma secuencial de matriz
 def sec_sum_matrix(matrix):
     rows, cols = np.shape(matrix)
-    add = 0
+    sum = 0
     for i in range(rows):
         for j in range(cols):
-            add += matrix[i, j]
+            sum += matrix[i, j]
 
-    return add
+    return sum
 
 # Suma de matriz de 1000x1000
 if __name__ == '__main__':
     # Matriz original
-    num_rows = 1000
-    num_cols = 1000
+    num_rows = 5000
+    num_cols = 5000
 
     chunk_rows = 100
     chunk_cols = 100

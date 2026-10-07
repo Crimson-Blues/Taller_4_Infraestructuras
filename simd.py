@@ -38,8 +38,8 @@ def multiplicacion_numpy(m1,m2):
 
 if __name__ == '__main__':
     # Modifica este valor para cambiar el tamaño de la matriz
-    num_filas = 1000
-    num_columnas = 1000
+    num_filas = 100
+    num_columnas = 100
 
     # Matrices con números aleatorios
     matriz_1 = np.random.randint(1, 101, size=(num_filas, num_columnas))

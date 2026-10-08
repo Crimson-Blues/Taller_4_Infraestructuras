@@ -33,9 +33,9 @@ def split_matrix(matrix, chunk_row, chunk_col):
         for i in range(q_row):
             for j in range(q_col):
                 chunks.append(matrix[i*chunk_row : (i+1)*chunk_row, 
-                                     j*chunk_col : (j+1)*chunk_col])
+                                     j*chunk_col : (j+1)*chunk_col]) # Llenar de chunks con slicing
 
-    return chunks
+    return chunks # Retorna lista de submatrices
 
 # Función principal para ejecutar la división de la suma en hilos
 def par_sum_matrix_threads(main_matrix, chunk_rows, chunk_cols):
@@ -53,7 +53,7 @@ def par_sum_matrix_threads(main_matrix, chunk_rows, chunk_cols):
     for thread in threads:
         thread.join()
 
-    # Combinar resultados
+    # Combinar resultados con una única suma final de la suma de los chunks
     final_result = sum(results)
     
     return final_result
@@ -64,10 +64,10 @@ def par_sum_matrix_procs(main_matrix, chunk_rows, chunk_cols):
     chunks = split_matrix(main_matrix, chunk_rows, chunk_cols)
 
     with mp.Pool() as pool:
-        # Creación de los trabajadores
+        # Creación de los trabajadores: ejecutan suma secuencial de chunk de matriz
         procs = [pool.apply_async(sec_sum_matrix, (chunk,)) for chunk in chunks]
         
-        # Recuperar resultados
+        # Recuperar resultados de pool de procesos
         results = [p.get() for p in procs]
 
     # Combinación final de resultados
@@ -79,10 +79,11 @@ def par_sum_matrix_procs(main_matrix, chunk_rows, chunk_cols):
 # Suma secuencial de matriz
 def sec_sum_matrix(matrix):
     rows, cols = np.shape(matrix)
-    sum = 0
+    sum = 0 # Acumulador simple inicializado en 0
+    # Ciclos clásicos for anidados para recorrer matriz
     for i in range(rows):
         for j in range(cols):
-            sum += matrix[i, j]
+            sum += matrix[i, j] # Suma de celdas una por una
 
     return sum
 

@@ -67,7 +67,7 @@ def sec_sum_matrix(matrix):
     total_sum = 0
     for i in range(rows):
         for j in range(cols):
-            total_sum += matrix[i, j]
+            total_sum += int(matrix[i, j]) # Cast a python integer para no sobrepasar límite de suma de Numpy
 
     return total_sum
 

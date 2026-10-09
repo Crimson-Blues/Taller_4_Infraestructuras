@@ -11,6 +11,7 @@
 import numpy as np
 import threading
 import time
+import statistics
 
 
 # Función que divide matriz en chunks de tamaño chunk_row X chunk_col
@@ -80,26 +81,70 @@ if __name__ == '__main__':
 
     chunk_rows = 1000
     chunk_cols = 1000
+    num_runs = 10  # Numero de iteraciones de testeo
+    
+    # Almacenar tiempos de ejecución
+    times_sec = []
+    times_h = []
 
-    # Crear matriz de 10000x10000 con números aleatorios entre 1 y 100
-    matrix = np.random.randint(1, 101, size=(num_rows, num_cols))
+    # Almacenar speed ups individuales
+    speedups = []
+  
+    # Equivalencia de todas las soluciones
+    equivs = []
 
-    # ----------- Procesamiento secuencial --------------
-    inicio_sec = time.time()
-    sec_result = sec_sum_matrix(matrix)
-    fin_sec = time.time()
-    t_sec = fin_sec - inicio_sec
+    print(f"Ejecutando prueba con {num_runs} iteraciones...")
 
-    # ----------- Procesamiento Híbrido (SMP - SIMD) ------------
-    inicio_par = time.time()
-    par_result = par_sum_matrix_smp_simd(matrix, chunk_rows, chunk_cols)
-    fin_par = time.time()
-    t_par = fin_par - inicio_par
+    for i in range(num_runs):
+        # Genera una nueva matriz por cada iteración para aumentar variación
+        matrix = np.random.randint(1, 101, size=(num_rows, num_cols))
 
-    # -------------- Resultados ----------------------
-    print(f"Resultados equivalentes: {sec_result == par_result}")
-    print(f"Tamaño de la matriz: {num_rows}x{num_cols}")
-    print(f"Tamaño de los bloques: {chunk_rows}x{chunk_cols} (Total hilos: {len(split_matrix(matrix, chunk_rows, chunk_cols))})")
-    print(f"Tiempo total de procesamiento secuencial: {t_sec:.3f} segundos")
-    print(f"Tiempo total de procesamiento híbrido (SMP-SIMD): {t_par:.3f} segundos")
-    print(f"Speedup obtenido: {t_sec/t_par:.2f}x")
+        # ----------- Procesamiento secuencial --------------
+        inicio_sec = time.perf_counter()
+        sec_result = sec_sum_matrix(matrix)
+        fin_sec = time.perf_counter()
+        t_sec = fin_sec - inicio_sec
+        times_sec.append(t_sec)
+
+        # ----------- Procesamiento híbrido SMP-SIMD ------------
+        inicio_par = time.perf_counter()
+        par_result = par_sum_matrix_smp_simd(matrix, chunk_rows, chunk_cols)
+        fin_par = time.perf_counter()
+        t_par_h = fin_par - inicio_par
+        times_h.append(t_par_h)
+        equivs.append(np.array_equal(sec_result, par_result))
+
+
+        # ----------- Speedups ------------
+        speedups.append(t_sec / t_par_h)
+
+        print(f"Iteration {i + 1}/{num_runs} completed.")
+
+    # ----------- Resumen de resultados --------------
+    print("\n" + "=" * 80)
+    print(
+        f"{'Implementación':<12} | {'Tiempo promedio (s)':<14} | {'Desviación Estándar (s)':<12} | {'Speedup promedio':<12} |{'Equivalencia':<12}"
+    )
+    print("=" * 80)
+
+    # Ejecución secuencial de base
+    mean_sec = statistics.mean(times_sec)
+    std_sec = statistics.stdev(times_sec) if num_runs > 1 else 0.0
+    print(f"{'Secuencial':<12} | {mean_sec:<14.5f} | {std_sec:<12.5f} | {'1.00x (Base)':<12} | {'True':<12}")
+
+    # Ejecuciones paralelas
+    parallel_data = [
+        ("Híbrido", times_h, speedups, equivs),
+    ]
+
+    for name, times, speedups, equivs in parallel_data:
+        mean_time = statistics.mean(times)
+        std_dev = statistics.stdev(times) if num_runs > 1 else 0.0
+        avg_speedup = statistics.mean(speedups)
+        std_speedup = statistics.stdev(speedups) if num_runs > 1 else 0.0
+
+        print(
+            f"{name:<12} | {mean_time:<14.5f} | {std_dev:<12.5f} | {avg_speedup:.2f}x (±{std_speedup:.2f}) | {all(equivs)}"
+        )
+
+    print("=" * 80)

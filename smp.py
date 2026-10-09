@@ -12,6 +12,7 @@ import threading
 import random
 import time
 import multiprocessing as mp
+import statistics #For analysis of results
 
 
 # Función para sumar todos los elementos de una matriz
@@ -88,44 +89,88 @@ def sec_sum_matrix(matrix):
     return sum
 
 # Suma de matriz de 1000x1000
-if __name__ == '__main__':
-    # Matriz original
+if __name__ == "__main__":
+    # Párametros de ejecución
     num_rows = 5000
     num_cols = 5000
-
     chunk_rows = 100
     chunk_cols = 100
+    num_runs = 10  # Numero de iteraciones de testeo
 
-    matrix = np.random.randint(1, 101, size=(num_rows, num_cols))
+    # Almacenar tiempos de ejecución
+    times_sec = []
+    times_threads = []
+    times_procs = []
 
-    #----------- Procesamiento secuencial --------------
-    inicio_sec = time.time()
-    sec_result = sec_sum_matrix(matrix)
-    fin_sec = time.time()
-    t_sec = fin_sec - inicio_sec
-    
+    # Almacenar speed ups individuales
+    speedups_threads = []
+    speedups_procs = []
 
-    #----------- Procesamiento paralelo con hilos ------------
-    inicio_par = time.time() #Empezar a contabilizar tiempo de solución paralela
-    par_result = par_sum_matrix_threads(matrix, chunk_rows, chunk_cols)
-    fin_par = time.time()  # Tiempo de fin de solució paralela
-    t_par = fin_par - inicio_par
+    # Equivalencia de todas las soluciones
+    equivs_t = []
+    equivs_p = []
 
+    print(f"Ejecutando prueba con {num_runs} iteraciones...")
 
-    #----------- Procesamiento paralelo con procesos ------------
-    inicio_par_p = time.time() #Empezar a contabilizar tiempo de solución paralela
-    par_result = par_sum_matrix_procs(matrix, chunk_rows, chunk_cols)
-    fin_par_p = time.time()  # Tiempo de fin de solució paralela
-    t_par_p = fin_par_p - inicio_par_p
+    for i in range(num_runs):
+        # Genera una nueva matriz por cada iteración para aumentar variación
+        matrix = np.random.randint(1, 101, size=(num_rows, num_cols))
 
-    # -------------- Resultados ----------------------
-    print(f"Resultados equivalentes: {sec_result == par_result}")
-    print(f"Tiempo total de procesamiento secuencial: {t_sec:.3f} segundos")
-    print(f"Tiempo total de procesamiento paralelo con hilos: {t_par:.3f} segundos")
-    print(f"Speedup con hilos: {t_sec/t_par:.2f}x" ) #Comparación entre tiempo secuencial y paralelo con hilos
+        # ----------- Procesamiento secuencial --------------
+        inicio_sec = time.perf_counter()
+        sec_result = sec_sum_matrix(matrix)
+        fin_sec = time.perf_counter()
+        t_sec = fin_sec - inicio_sec
+        times_sec.append(t_sec)
 
-    print(f"{"*"*5} Implementación con procesos {"*"*5}")
-    print(f"Tiempo total de procesamiento paralelo con procesos: {t_par_p:.3f} segundos")
-    print(f"Speedup con procesos: {t_sec/t_par_p:.2f}x" ) #Comparación entre tiempo secuencial y paralelo con procesos
+        # ----------- Procesamiento paralelo con hilos ------------
+        inicio_par = time.perf_counter()
+        par_result = par_sum_matrix_threads(matrix, chunk_rows, chunk_cols)
+        fin_par = time.perf_counter()
+        t_par_t = fin_par - inicio_par
+        times_threads.append(t_par_t)
+        equivs_t.append(np.array_equal(sec_result, par_result))
 
+        # ----------- Procesamiento paralelo con procesos ------------
+        inicio_par_p = time.perf_counter()
+        par_p_result = par_sum_matrix_procs(matrix, chunk_rows, chunk_cols)
+        fin_par_p = time.perf_counter()
+        t_par_p = fin_par_p - inicio_par_p
+        times_procs.append(t_par_p)
+        equivs_p.append(np.array_equal(sec_result, par_p_result))
 
+        # ----------- Speedups ------------
+        speedups_threads.append(t_sec / t_par_t)
+        speedups_procs.append(t_sec / t_par_p)
+
+        print(f"Iteration {i + 1}/{num_runs} completed.")
+
+    # ----------- Resumen de resultados --------------
+    print("\n" + "=" * 80)
+    print(
+        f"{'Implementación':<12} | {'Tiempo promedio (s)':<14} | {'Desviación Estándar (s)':<12} | {'Speedup promedio':<12} |{'Equivalencia':<12}"
+    )
+    print("=" * 80)
+
+    # Ejecución secuencial de base
+    mean_sec = statistics.mean(times_sec)
+    std_sec = statistics.stdev(times_sec) if num_runs > 1 else 0.0
+    print(f"{'Secuencial':<12} | {mean_sec:<14.5f} | {std_sec:<12.5f} | {'1.00x (Base)':<12} | {'True':<12}")
+
+    # Ejecuciones paralelas
+    parallel_data = [
+        ("Hilos", times_threads, speedups_threads, equivs_t),
+        ("Procesos", times_procs, speedups_procs, equivs_p),
+    ]
+
+    for name, times, speedups, equivs in parallel_data:
+        mean_time = statistics.mean(times)
+        std_dev = statistics.stdev(times) if num_runs > 1 else 0.0
+        avg_speedup = statistics.mean(speedups)
+        std_speedup = statistics.stdev(speedups) if num_runs > 1 else 0.0
+
+        print(
+            f"{name:<12} | {mean_time:<14.5f} | {std_dev:<12.5f} | {avg_speedup:.2f}x (±{std_speedup:.2f}) | {all(equivs)}"
+        )
+
+    print("=" * 80)
